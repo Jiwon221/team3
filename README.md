@@ -211,7 +211,7 @@ com.study.board
 3. **ResponseEntity**: 상태 코드(200/201/204)를 의도에 맞게 쓰기
 4. **Bean Validation**: `@Valid`, `@NotBlank`, `@Size`
 5. **JPA 변경 감지**: `update()` 후 `save()` 없이도 반영되는 이유 (트랜잭션, 영속 상태)
-6. **연관관계/영속성 전이**: `cascade`, `orphanRemoval`, 연관관계 주인
+6. **연관관계/영속성 전이**: 연관관계 주인, `cascade` (`orphanRemoval`은 심화 선택)
 7. **예외 → HTTP 상태 코드**: `@ResponseStatus`
 
 ## 8. 힌트
@@ -220,7 +220,8 @@ com.study.board
 <summary>JPA 키워드 힌트 (도메인 설계)</summary>
 
 `@Entity`, `@Id` + `@GeneratedValue`, `@Column(nullable, length)`, `@ManyToOne` / `@OneToMany(mappedBy)`,
-`cascade`, `orphanRemoval`, `@OrderBy`, `@PrePersist` / `@PreUpdate`(또는 Spring Data Auditing).
+`cascade`, `@OrderBy`, `@PrePersist` / `@PreUpdate`(또는 Spring Data Auditing).
+(`orphanRemoval`은 몰라도 됩니다. 아래 "댓글 삭제" 힌트 참고)
 </details>
 
 <details>
@@ -247,13 +248,21 @@ Java 17+의 `record`를 쓰면 간단합니다. 요청 DTO의 필드에 `@NotBla
 <details>
 <summary>글 삭제 시 댓글은 어떻게 같이 지우나요?</summary>
 
-`@OneToMany`의 `cascade = REMOVE`(또는 `ALL`)를 쓰면 글 삭제 시 댓글도 삭제됩니다.
+방법은 두 가지입니다. 편한 쪽을 쓰세요.
+
+1. **cascade**: `@OneToMany(mappedBy = "post", cascade = CascadeType.ALL)` 처럼 설정하면 글을 삭제할 때 댓글도 같이 삭제됩니다.
+2. **직접 삭제**: `cascade`를 안 쓰고, 서비스에서 그 글의 댓글을 `commentRepository`로 먼저 지운 뒤 글을 지웁니다.
+   (예: 글에 속한 댓글을 조회해서 `deleteAll`, 또는 `deleteByPostId` 같은 쿼리 메서드)
 </details>
 
 <details>
 <summary>댓글 삭제는 어떻게?</summary>
 
-`orphanRemoval = true`라면 글의 댓글 컬렉션에서 제거하는 것만으로 DELETE가 나갑니다. `commentRepository.delete(...)`를 써도 되는데, 이때 메모리의 컬렉션과 DB 상태가 어긋나지 않는지 생각해 보세요.
+가장 쉬운 방법은 `commentRepository.delete(comment)` 입니다.
+(심화: `@OneToMany(orphanRemoval = true)`를 설정하면 글의 댓글 리스트에서 제거하는 것만으로도 DELETE가 나갑니다.
+이 옵션은 몰라도 됩니다. 쓴다면 메모리의 리스트와 DB 상태가 어긋나지 않는지 생각해 보세요.)
+
+그리고 삭제 전에 **그 댓글이 요청한 글(postId)에 속하는지** 꼭 확인하세요. (테스트 `다른_글의_댓글은_삭제할수_없다`)
 </details>
 
 <details>
@@ -281,7 +290,7 @@ Java 17+의 `record`를 쓰면 간단합니다. 요청 DTO의 필드에 `@NotBla
 - [ ] 엔티티에 불필요한 public setter가 없고, 변경이 의미 있는 메서드(`update`, `addComment` 등)로 표현되는가
 - [ ] 기본 생성자 접근 제한(`protected`) 등 엔티티 기본 규칙을 지켰는가
 - [ ] 연관관계의 주인이 외래키를 가진 쪽(Comment.post)인가, 양방향 연관관계의 양쪽 값을 함께 맞췄는가
-- [ ] `cascade` / `orphanRemoval`을 이유를 설명할 수 있게 사용했는가
+- [ ] 글 삭제 시 댓글 삭제 방식(`cascade` 또는 직접 삭제)을 선택한 이유를 설명할 수 있는가
 - [ ] 생성/수정 시각을 직접 `new` 하지 않고 한 곳에서 일관되게 처리했는가
 
 **계층 분리**
