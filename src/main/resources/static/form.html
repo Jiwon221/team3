@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>글 작성 - 팀 스터디 게시판</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header><a class="logo" href="/index.html">📝 팀 스터디 게시판</a></header>
+<main>
+  <h1 id="heading">글쓰기</h1>
+  <p id="error" class="error" hidden></p>
+  <form id="form">
+    <label>제목 <input type="text" id="title"></label>
+    <label>작성자 <input type="text" id="author"></label>
+    <label>내용 <textarea id="content" rows="10"></textarea></label>
+    <div class="actions">
+      <button class="btn primary" type="submit">저장</button>
+      <a class="btn" id="cancel" href="/index.html">취소</a>
+    </div>
+  </form>
+</main>
+<script src="/js/api.js"></script>
+<script>
+  const id = queryId(); // ?id=3 이면 수정, 없으면 작성
+
+  async function init() {
+    if (!id) return;
+    document.getElementById('heading').textContent = '글 수정';
+    document.title = '글 수정 - 팀 스터디 게시판';
+    document.getElementById('cancel').href = '/post.html?id=' + id;
+    try {
+      // GET /api/posts/{id}
+      const post = await api('GET', '/api/posts/' + id);
+      document.getElementById('title').value = post.title;
+      document.getElementById('author').value = post.author;
+      document.getElementById('content').value = post.content;
+    } catch (e) {
+      showError(e.message);
+    }
+  }
+
+  document.getElementById('form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    showError('');
+    const body = {
+      title: document.getElementById('title').value,
+      author: document.getElementById('author').value,
+      content: document.getElementById('content').value,
+    };
+    try {
+      // 작성: POST /api/posts  /  수정: PUT /api/posts/{id}   (둘 다 응답에 { id, ... } 필요)
+      const saved = id ? await api('PUT', '/api/posts/' + id, body) : await api('POST', '/api/posts', body);
+      location.href = '/post.html?id=' + (saved && saved.id ? saved.id : id);
+    } catch (e) {
+      showError(e.message);
+    }
+  });
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>게시글 목록 - 팀 스터디 게시판</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<header><a class="logo" href="/index.html">📝 팀 스터디 게시판</a></header>
+<main>
+  <div class="toolbar">
+    <h1>게시글 목록</h1>
+    <a class="btn primary" href="/form.html">글쓰기</a>
+  </div>
+  <p id="error" class="error" hidden></p>
+  <table>
+    <thead><tr><th class="num">번호</th><th>제목</th><th>작성자</th><th>작성일</th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</main>
+<script src="/js/api.js"></script>
+<script>
+  // GET /api/posts -> [{ id, title, author, createdAt, commentCount }]
+  async function load() {
+    const tbody = document.getElementById('rows');
+    try {
+      const posts = await api('GET', '/api/posts');
+      tbody.replaceChildren();
+      if (!posts || posts.length === 0) {
+        const tr = tbody.insertRow();
+        const td = tr.insertCell();
+        td.colSpan = 4; td.className = 'empty'; td.textContent = '등록된 게시글이 없습니다.';
+        return;
+      }
+      for (const p of posts) {
+        const tr = tbody.insertRow();
+        tr.insertCell().textContent = p.id;
+        tr.cells[0].className = 'num';
+        const titleCell = tr.insertCell();
+        const a = document.createElement('a');
+        a.href = '/post.html?id=' + p.id;
+        a.textContent = p.title;
+        titleCell.appendChild(a);
+        const badge = document.createElement('span');
+        badge.className = 'badge';
+        badge.textContent = p.commentCount;
+        titleCell.append(' ', badge);
+        tr.insertCell().textContent = p.author;
+        tr.insertCell().textContent = formatDate(p.createdAt);
+      }
+    } catch (e) {
+      showError('목록을 불러오지 못했습니다: ' + e.message);
+    }
+  }
+  load();
+</script>
+</body>
+</html>
