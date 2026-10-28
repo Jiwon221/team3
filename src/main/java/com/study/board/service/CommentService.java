@@ -44,5 +44,6 @@ public class CommentService {
         } else {
             throw new CommentNotFoundException(commentId);
         }
+        commentRepository.deleteById(commentId);
     }
 }
